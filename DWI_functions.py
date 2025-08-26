@@ -5,9 +5,9 @@ import pandas as pd
 import numpy as np
 
 #function to calculate dewpoint depression
-#inputs: datasets of temperature and relative humidity
+#inputs: datasets of temperature, relative humidity, chosen GWL
 #outputs: a dataset of dewpoint depression
-def calc_dpd(ds_temp, ds_rh):
+def calc_dpd(ds_temp, ds_rh, chosen_gwl):
     dpd = ds_temp - 243.5 * (np.log(ds_rh/100) + 17.67*ds_temp/(243.5 + ds_temp))/(17.67 - (np.log(ds_rh/100) + 17.67*ds_temp/(243.5 + ds_temp)))
 
     dpd.attrs = {
@@ -35,8 +35,11 @@ def calc_dpd(ds_temp, ds_rh):
     
     return ds_dpd
 
-def calc_dwi(ds_temp, ds_rh, ds_wind_sp, A, B, C, D):
-    dwi = (calc_dpd(ds_temp, ds_rh)['dpd'] + A)/B * (ds_wind_sp + C)/D
+#function to calculate dry windy index
+#inputs: datasets of temperature and relative humidity, chosen GWL (string), and four scaler constants as defined in Kevin Tory's paper
+#outputs: a dataset of dry windy index
+def calc_dwi(ds_temp, ds_rh, ds_wind_sp, chosen_gwl, A, B, C, D):
+    dwi = (calc_dpd(ds_temp, ds_rh, chosen_gwl)['dpd'] + A)/B * (ds_wind_sp + C)/D
 
     dwi.attrs = {
     'long_name': 'afternoon dry-windy index computed from tasmax, hursmin, maximum wind speed, and the tuned constants',
@@ -63,12 +66,14 @@ def calc_dwi(ds_temp, ds_rh, ds_wind_sp, A, B, C, D):
     ds_wind_sp.close()
     return ds_dwi
 
+#function to compute Psudo FFDI
+#inputs: dwi dataset, chosen GWL (string)
+#outputs: Psudo FFDI dataset
 #conversion factor to FFDI from Kevin
-#Psudo FFDI: (50/3)*(DF/10) matching FFDI for a particular event provided by Musa, 30 Sept 2023
+#Psudo FFDI: (50/3)*(DF/10)*dwi matching FFDI for a particular event provided by Musa, 30 Sept 2023
 #also computed for mean T humidity for Melb airport for Feb for total obs history at that time
-#this removes the wind speed bias - FFDI undersensitive to wind and over sensitive to temp, 
-#they often compensate. But not great on cool windy days
-def calc_p_ffdi(ds_dwi):
+#this removes the wind speed bias - FFDI undersensitive to wind and over sensitive to temp they often compensate. But not great on cool windy days.
+def calc_p_ffdi(ds_dwi, chosen_gwl):
     p_ffdi = 50/3*ds_dwi
 
     p_ffdi.attrs = {
@@ -94,10 +99,13 @@ def calc_p_ffdi(ds_dwi):
     ds_dwi.close()
     return ds_p_ffdi
 
+#function to compute Faux FFDI
+#inputs: datasets of dwi and temperature, chosen GWL (string)
+#outputs: Psudo FFDI dataset
 #conversion factor to FFDI from Kevin
-#Faux FFDI: (T + 12)(DF/10)/2 
+#Faux FFDI: (T + 12)(DF/10)/2 *dwi
 
-def calc_faux_ffdi(ds_dwi, ds_temp):
+def calc_faux_ffdi(ds_dwi, ds_temp, chosen_gwl):
     faux_ffdi = (ds_temp + 12)*ds_dwi/2
 
     faux_ffdi.attrs = {
@@ -124,5 +132,5 @@ def calc_faux_ffdi(ds_dwi, ds_temp):
     ds_dwi.close()
     return ds_faux_ffdi
 
-if __name__ == "__main__":
-    main()
+#if __name__ == "__main__":
+#    main()
