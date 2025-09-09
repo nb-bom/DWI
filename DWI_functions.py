@@ -131,6 +131,3 @@ def calc_faux_ffdi(ds_dwi, ds_temp, chosen_gwl):
     ds_temp.close()
     ds_dwi.close()
     return ds_faux_ffdi
-
-#if __name__ == "__main__":
-#    main()
